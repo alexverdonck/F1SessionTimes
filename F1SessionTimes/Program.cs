@@ -11,13 +11,15 @@ namespace F1SessionTimes
 {
     class Program
     {
-        
+
         static void Main(string[] args)
         {
+            Console.WriteLine("Getting Sessions");
             List<Event> events;
             events = Task.Run(() => GetEvents()).Result;
             // need to output to json file
             listToJsonFile(events);
+            Console.WriteLine("Done");
             Console.ReadLine();
         }
 
@@ -62,10 +64,21 @@ namespace F1SessionTimes
                 {
                     try
                     {
-                        // get the time and offset
-                        DateTimeOffset time = DateTimeOffset.Parse(sessionItem.Descendants("time").FirstOrDefault().GetAttributeValue("datetime", "") + " " + sessionItem.Descendants("time").FirstOrDefault().GetAttributeValue("data-gmt-offset", ""));
-                        // add session to dictionary
-                        tempEvent.sessions[sessionItem.Descendants("span").Where(x => x.GetAttributeValue("class", "").Equals("race-type")).FirstOrDefault().InnerText] = time.ToString("o");
+                        var raceType = sessionItem.Descendants("span").Where(x => x.GetAttributeValue("class", "").Equals("race-type")).First().InnerText;
+
+                        var timeNode = sessionItem.Descendants("time").FirstOrDefault();
+                        if (timeNode != null)
+                        {
+                            // get the time and offset if exists
+                            var time = DateTimeOffset.Parse($"{timeNode.GetAttributeValue("datetime", "")} {timeNode.GetAttributeValue("data-gmt-offset", "")}");
+                            tempEvent.sessions[raceType] = time.ToString("o");
+                        }
+                        else
+                        {
+                            // time like TBC
+                            var day = sessionItem.Descendants("span").Where(x => x.GetAttributeValue("class", "").Equals("day")).First().InnerText;
+                            tempEvent.sessions[raceType] = day;
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -81,9 +94,10 @@ namespace F1SessionTimes
         {
             using (StreamWriter file = File.CreateText(@".\events.json"))
             {
-                JsonSerializer serializer = new JsonSerializer();
-                serializer.Formatting = Formatting.Indented;
-                serializer.Serialize(file, list);
+                new JsonSerializer
+                {
+                    Formatting = Formatting.Indented
+                }.Serialize(file, list);
             }
         }
     }
