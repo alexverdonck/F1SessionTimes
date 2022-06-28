@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.IO;
+using System.Web;
 
 namespace F1SessionTimes
 {
@@ -47,6 +48,8 @@ namespace F1SessionTimes
 
                 // get name/race title
                 tempEvent.name = raceItem.Descendants("h3").Where(x => x.GetAttributeValue("class", "").Equals("race-title")).FirstOrDefault().InnerText;
+
+                tempEvent.name = HttpUtility.HtmlDecode(tempEvent.name);
 
                 // get all sessions
                 var sessions = raceItem.Descendants("ul").Where(x => x.GetAttributeValue("class", "").Contains("race-time-list")).ToList();
